@@ -1,5 +1,11 @@
+(menhir
+ (modules parser))
+
+(ocamllex lexer)
+
 (library
- (name bexp_ocaml))
+ (name bexp_ocaml)
+ (modules parser lexer util core))
 
 (env
  (dev

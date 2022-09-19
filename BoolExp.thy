@@ -120,7 +120,11 @@ code_pred (modes: i => o => bool as bigstep') bigstep .
 
 definition "bigstep_ex t = Predicate.the (bigstep' t)"
 
+text "evalulates to: BTrue"
 value "bigstep_ex (BIf BTrue BTrue BFalse)"
+
+text "evalutes to: BFalse"
+value "bigstep_ex (BIf (BIf BTrue BFalse BTrue) BTrue (BIf BTrue BFalse BTrue))"
 
 export_code bigstep_ex BTrue in OCaml file_prefix "core"
 
