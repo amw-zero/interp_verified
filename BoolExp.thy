@@ -11,37 +11,13 @@ datatype boolexp =
   BFalse | 
   BIf boolexp boolexp boolexp
 
-definition is_value_bd :: "boolexp \<Rightarrow> bool" where
-"is_value_bd t = (case t of BTrue \<Rightarrow> True | BFalse \<Rightarrow> True | _ \<Rightarrow> False)"
+definition is_value :: "boolexp \<Rightarrow> bool" where
+"is_value t = (case t of BTrue \<Rightarrow> True | BFalse \<Rightarrow> True | _ \<Rightarrow> False)"
 
 inductive beval1 :: "boolexp \<Rightarrow> boolexp \<Rightarrow> bool" where
 beval1_if_true: "beval1 (BIf BTrue t2 t3) t2" |
 beval1_if_false: "beval1 (BIf BFalse t2 t3) t3" |
 beval1_if: "beval1 t1 t1' \<Longrightarrow> beval1 (BIf t1 t2 t3) (BIf t1' t2 t3)"
-
-fun beval1f :: "boolexp \<Rightarrow> boolexp" where
-"beval1f (BIf BTrue t2 t3) = t2" |
-"beval1f (BIf BFalse t2 t3) = t3" |
-"beval1f (BIf t1 t2 t3) = (BIf (beval1f t1) t2 t3)" |
-"beval1f t = t"
-
-fun bevalf :: "nat \<Rightarrow> boolexp \<Rightarrow> boolexp" where
-"bevalf 0 t = t" | 
-"bevalf _ BTrue = BTrue" |
-"bevalf _ BFalse = BFalse" |
-"bevalf (Suc fuel) t = bevalf fuel (beval1f t)"
-
-theorem beval1f_determinacy: "\<lbrakk>beval1f t = t'; beval1f t = t''\<rbrakk> \<Longrightarrow> t' = t''"
-proof(induction t)
-  case BTrue
-  then show ?case by simp
-next
-  case BFalse
-  then show ?case by simp
-next
-  case (BIf t1 t2 t3)
-  then show ?case by simp
-qed
 
 code_pred beval1 .
 
@@ -76,13 +52,13 @@ section "Normal form"
 definition is_normal :: "boolexp \<Rightarrow> bool" where
 "is_normal b \<equiv> \<forall>t. \<not>(beval1 b t)"
 
-theorem "is_value_bd t \<Longrightarrow> is_normal t"
-  by (auto simp: is_normal_def is_value_bd_def elim: beval1.cases)
+theorem "is_value t \<Longrightarrow> is_normal t"
+  by (auto simp: is_normal_def is_value_def elim: beval1.cases)
 
 (* BIf case Found with sledgehammer *)
-theorem "is_normal t \<Longrightarrow> is_value_bd t"
+theorem "is_normal t \<Longrightarrow> is_value t"
   unfolding is_normal_def
-  unfolding is_value_bd_def
+  unfolding is_value_def
 proof (induction t)
   case BTrue
   then show ?case by simp
@@ -104,6 +80,48 @@ code_pred (modes: i => o => bool as beval') beval .
 
 definition "beval_ex t = Predicate.the (beval' t)"
 
-export_code beval_ex BTrue in OCaml
+(*export_code beval_ex BTrue in OCaml file_prefix "core"*)
+
+(*value "beval_ex (BIf BTrue BTrue BFalse)"*)
+
+values "{ t. beval1 (BIf BTrue BTrue BFalse) t }"
+
+inductive beval_st :: "boolexp \<Rightarrow> boolexp \<Rightarrow> bool" where
+b_reflexive: "beval_st t t" |
+b_step: "beval1 t t' \<Longrightarrow> beval_st t' t'' \<Longrightarrow> beval_st t t''"
+
+code_pred (modes: i => o => bool as beval_st') beval_st . 
+
+definition "beval_st_ex t = Predicate.the (beval_st' t)"
+
+value "beval_st_ex BTrue"
+
+inductive bigstep :: "boolexp \<Rightarrow> boolexp \<Rightarrow> bool" where
+bval: "is_value t \<Longrightarrow> bigstep t t" |
+bif_true: "\<lbrakk> bigstep t1 BTrue; bigstep t2 v\<rbrakk> \<Longrightarrow> bigstep (BIf t1 t2 t3) v" |
+bif_false: "\<lbrakk> bigstep t1 BFalse; bigstep t3 v\<rbrakk> \<Longrightarrow> bigstep (BIf t1 t2 t3) v"
+
+theorem "\<lbrakk>bigstep t t'; bigstep t t''\<rbrakk> \<Longrightarrow> t' = t''"
+proof (induction t t' arbitrary: t'' rule: bigstep.induct)
+  case (bval t)
+  then show ?case
+    by (metis bigstep.cases boolexp.simps(10) is_value_def)
+next
+  case (bif_true t1 t2 v t3)
+  then show ?case
+    by (smt (verit, best) bigstep.cases boolexp.distinct(1) boolexp.inject boolexp.simps(10) is_value_def)
+next
+  case (bif_false t1 t3 v t2)
+  then show ?case
+    by (smt (verit) bigstep.cases boolexp.distinct(1) boolexp.inject boolexp.simps(10) is_value_def)
+qed
+
+code_pred (modes: i => o => bool as bigstep') bigstep . 
+
+definition "bigstep_ex t = Predicate.the (bigstep' t)"
+
+value "bigstep_ex (BIf BTrue BTrue BFalse)"
+
+export_code bigstep_ex BTrue in OCaml file_prefix "core"
 
 end

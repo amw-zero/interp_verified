@@ -1,2 +1,6 @@
 (library
  (name bexp_ocaml))
+
+(env
+ (dev
+  (flags (:standard -w -66))))
