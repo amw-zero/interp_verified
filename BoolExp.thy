@@ -98,14 +98,13 @@ value "beval_st_ex BTrue"
 
 inductive bigstep :: "boolexp \<Rightarrow> boolexp \<Rightarrow> bool" where
 bval: "is_value t \<Longrightarrow> bigstep t t" |
-bif_true: "\<lbrakk> bigstep t1 BTrue; bigstep t2 v\<rbrakk> \<Longrightarrow> bigstep (BIf t1 t2 t3) v" |
-bif_false: "\<lbrakk> bigstep t1 BFalse; bigstep t3 v\<rbrakk> \<Longrightarrow> bigstep (BIf t1 t2 t3) v"
+bif_true: "\<lbrakk>bigstep t1 BTrue; bigstep t2 v\<rbrakk> \<Longrightarrow> bigstep (BIf t1 t2 t3) v" |
+bif_false: "\<lbrakk>bigstep t1 BFalse; bigstep t3 v\<rbrakk> \<Longrightarrow> bigstep (BIf t1 t2 t3) v"
 
 theorem "\<lbrakk>bigstep t t'; bigstep t t''\<rbrakk> \<Longrightarrow> t' = t''"
 proof (induction t t' arbitrary: t'' rule: bigstep.induct)
   case (bval t)
-  then show ?case
-    by (metis bigstep.cases boolexp.simps(10) is_value_def)
+  then show ?case by (auto simp: is_value_def intro: bigstep.cases)
 next
   case (bif_true t1 t2 v t3)
   then show ?case
